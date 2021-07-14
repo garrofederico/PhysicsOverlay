@@ -1,0 +1,13 @@
+{
+	"DATA_ROOT": "/cvlabdata2/cvlab/datasets_hugonot/DATA/physic_overlay/DATA",
+	"FRAMES_SYNCH": { 
+		"6_1/GH010172": 418,
+		"6_2/GH010434": 309,
+		"6_3/GH011764": 197,
+		"6_4/GH010429": 562
+	},
+	"EXPERIMENTS" : {
+		"experiment1":[3060,6600],
+		"experiment2":[12240,16500]
+	}
+}
