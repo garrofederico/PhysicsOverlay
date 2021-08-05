@@ -198,18 +198,19 @@ Y.append(score)
 print(scale, score)
 plt.plot(X,Y)
 #plt.show()
-sys.exit()
-sys.exit()
-YY = np.concatenate([np.array(rep_1), np.array(rep_2)],axis=0)
-print(YY.shape)
-min_x = np.min(YY[:,:,0])
-min_y = np.min(YY[:,:,2])
-min_z = np.min(1-YY[:,:,1])
 
-max_x = np.max(YY[:,:,0])
-max_y = np.max(YY[:,:,2])
-max_z = np.max(1-YY[:,:,1])
+# YY = np.concatenate([np.array(rep_1), np.array(rep_2)],axis=0)
+# print(YY.shape)
+# min_x = np.min(YY[:,:,0])
+# min_y = np.min(YY[:,:,2])
+# min_z = np.min(1-YY[:,:,1])
+#
+# max_x = np.max(YY[:,:,0])
+# max_y = np.max(YY[:,:,2])
+# max_z = np.max(1-YY[:,:,1])
 #out = cv2.VideoWriter('test3.avi', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 60, (640, 480))
+fig = plt.figure()
+ax = fig.add_subplot(projection='3d')
 for idx, elm in enumerate(zip(rep_1, rep_2)):
 
     for points in elm:
@@ -217,11 +218,13 @@ for idx, elm in enumerate(zip(rep_1, rep_2)):
             p1 = points[pair[0]]
             p2 = points[pair[1]]
             ax.plot([p1[0], p2[0]], [p1[2], p2[2]], [1-p1[1], 1-p2[1]], pair[2])
-    ax.set_xlim(min_x,max_x)
-    ax.set_ylim(min_y,max_y)
-    ax.set_zlim(min_z,max_z)
-    plt.savefig(os.path.join('temp', str(idx).zfill(4) + '_3d.jpg'))
-    ax.cla()
+    #ax.set_xlim(min_x,max_x)
+    #ax.set_ylim(min_y,max_y)
+    #ax.set_zlim(min_z,max_z)
+    #plt.savefig(os.path.join('temp', str(idx).zfill(4) + '_3d.jpg'))
+    plt.draw()
+    plt.pause(0.1)
+
     #out.write(cv2.imread('temp.jpg'))
 
 out = cv2.VideoWriter('test3.avi', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 60, (960, 1080))

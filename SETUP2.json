@@ -1,5 +1,5 @@
 {
-	"DATA_ROOT": "/cvlabdata2/cvlab/datasets_hugonot/DATA/physic_overlay/DATA",
+	"DATA_ROOT": "/Users/federico/PycharmProjects/physic_overlay_codebase/DATA",
 	"FRAMES_SYNCH": {
 		"6_1/GH010174": 1815,
 		"6_2/GH010436": 1650,
