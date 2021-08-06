@@ -75,11 +75,11 @@ if __name__ == '__main__':
     # speed_3d variables init:
     frame_rate = 30  # Go Pro's frame rate
     d_time = 1/ frame_rate
-    point_3D_prev = 0
+    points_3D_prev = np.zeros((4,1))  # TODO: get position from XML file
 
     # speed exponential moving window average init:
     speed_emwa = 0
-    beta_speed = 0.9333
+    beta_speed = 0.5
 
     # acc_3d variables init:
     acc_3d_prev = 0
@@ -92,12 +92,12 @@ if __name__ == '__main__':
     angles1_prev = 0
     # w_3d exponential moving window average init:
     w_3d_emwa = 0
-    beta_w_3d = 0.95
+    beta_w_3d = 0.9
 
 
     #change to select specific parts of the video, for debugging purposes, if not in use, set it to 0
 
-    DEBUG_OFFSET = 2000
+    DEBUG_OFFSET = 2015
 
     for idx, c in enumerate(root[2 + DEBUG_OFFSET:]):
         idx += DEBUG_OFFSET
@@ -131,24 +131,24 @@ if __name__ == '__main__':
         rmat, _ = cv2.Rodrigues(rvec)
         angles1, mtxR, mtxQ, Qx, Qy, Qz = cv2.RQDecomp3x3(rmat)
         angles1 = np.array(angles1, dtype= np.float64)
-        print(angles1)
+        #print(angles1)
         angles2 = rotation_matrix_to_euler_angles(rmat)
-        angles1 = angles2
+        #angles1 = angles2
 
-        print(angles2)
+        #print(angles2)
         #print(rvec.T)
         #print(tvec)
 
         # Calculation of speed_3d of the central (black) point of the FoR
         # scale = 2 # conversion to meters
-        speed_3d = (points_3D[3] - point_3D_prev) / d_time
-        point_3D_prev = points_3D[3]
+        speed_3d = (points_3D - points_3D_prev) / d_time
+
 
         # speed exponential moving weighted average
         speed_emwa = beta_speed * speed_emwa + (1 - beta_speed) * speed_3d
 
         # 2D value to visualize in image
-        speed_3d_rearranged = np.array([speed_emwa[2],speed_emwa[0],-speed_emwa[1]], dtype= np.float64)
+        speed_3d_rearranged = np.array([speed_emwa[:,2],speed_emwa[:,0],-speed_emwa[:,1]], dtype= np.float64)
         speed_2d = cv2.projectPoints(speed_3d_rearranged, rvec, tvec, K, dist)[0]
         speed_2d = np.squeeze(speed_2d) # change the shape from the output from projectPoints
         speed_2d = np.array(speed_2d, dtype=np.int32)
@@ -161,16 +161,53 @@ if __name__ == '__main__':
 
 
         # 2D value to visualize in image
-        acc_3d_rearranged = np.array([acc_emwa[2],acc_emwa[0],-acc_emwa[1]], dtype= np.float64)
+        acc_3d_rearranged = np.array([acc_emwa[:,2],acc_emwa[:,0],-acc_emwa[:,1]], dtype= np.float64)
         acc_2d = cv2.projectPoints(acc_3d_rearranged, rvec, tvec, K, dist)[0]
         acc_2d = np.squeeze(acc_2d) # change the shape from the output from projectPoints
         acc_2d = np.array(acc_2d, dtype=np.int32)
 
         # Calculation of w of the central (black) point of the FoR
-        w_3d = (angles1 - angles1_prev) * 3# / d_time
-        angles1_prev = angles1
-        w_3d_emwa = beta_w_3d * w_3d_emwa + (1 - beta_w_3d) * w_3d
 
+        x_vec = points_3D[2] - points_3D[3]
+        y_vec = points_3D[1] - points_3D[3]
+        z_vec = points_3D[0] - points_3D[3]
+
+
+        # Intermediate variables for debugging
+        x_vec_prev = points_3D_prev[2] - points_3D_prev[3]
+        y_vec_prev = points_3D_prev[1] - points_3D_prev[3]
+        z_vec_prev = points_3D_prev[0] - points_3D_prev[3]
+        dx = (x_vec - x_vec_prev) / d_time #speed_emwa[2]
+        dy = (y_vec - y_vec_prev) / d_time #speed_emwa[1]
+        dz = (z_vec - z_vec_prev) / d_time #speed_emwa[0]
+
+        #print(x_vec_prev)
+        print(x_vec)
+
+        # Refresh of points 3D used in calculation of w and speed_3d
+        points_3D_prev = points_3D
+
+        w_x_1 = np.cross(x_vec, dy)
+        w_x_2 = np.cross(x_vec, dz)
+        w_y_1 = np.cross(y_vec, dx)
+        w_y_2 = np.cross(y_vec, dz)
+        w_z_1 = np.cross(z_vec, dx)
+        w_z_2 = np.cross(z_vec, dy)
+
+        fw_x_1 = np.dot(w_x_1,y_vec)
+        fw_x_2 = np.dot(w_x_2,z_vec)
+        fw_y_1 = np.dot(w_y_1,x_vec)
+        fw_y_2 = np.dot(w_y_2,z_vec)
+        fw_z_1 = np.dot(w_z_1,x_vec)
+        fw_z_2 = np.dot(w_z_2,y_vec)
+
+        w_3d = np.array([-fw_x_1,-fw_y_1,-fw_z_1], dtype=np.float64)
+        # *it might be necessary tu multiply by inverse R matrix
+        #w_3d = np.matmul(np.linalg.inv(rmat),w_3d)
+
+        # w_3d = (angles1 - angles1_prev) * 3# / d_time
+        # angles1_prev = angles1
+        w_3d_emwa = beta_w_3d * w_3d_emwa + (1 - beta_w_3d) * w_3d
         # 2D value to visualize in image
         w_3d_rearranged = np.array([w_3d_emwa[0],w_3d_emwa[1], w_3d_emwa[2]], dtype= np.float64)
         w_2d = cv2.projectPoints(w_3d_rearranged, rvec, tvec, K, dist)[0]
@@ -191,8 +228,9 @@ if __name__ == '__main__':
         p_w = points_2D_box[3][0]
 
 
+
         #Frame lines:
-        current_frame = cv2.line(current_frame, tuple(p_black), tuple(p_r),thickness=3, color=(0,0,255)) #red
+        current_frame = cv2.line(current_frame, tuple(p_black), tuple(p_r),thickness=3, color=(0,0,255))  # red
         current_frame = cv2.line(current_frame, tuple(p_black), tuple(p_g),thickness=3, color=(0,255,0)) #green
         current_frame = cv2.line(current_frame, tuple(p_black), tuple(p_b),thickness=3, color=(255,0,0)) #blue
         #filling box lines:
@@ -217,13 +255,13 @@ if __name__ == '__main__':
         current_frame = cv2.circle(current_frame, (p_m[0],p_m[1]), radius=5, color=(255, 0, 255), thickness=-1) #magenta point
         current_frame = cv2.circle(current_frame, (p_w[0],p_w[1]), radius=5, color=(255, 255, 255), thickness=-1) #white point
 
-        # Speed:
-        current_frame = cv2.circle(current_frame, (speed_2d[0],speed_2d[1]), radius=5, color=(0, 0, 0), thickness=-1)
-        current_frame = cv2.line(current_frame, tuple(p_black), tuple(speed_2d),thickness=3, color=(0,0,0))
-        # Acc:
-        current_frame = cv2.circle(current_frame, (acc_2d[0],acc_2d[1]), radius=5, color=(0, 255, 255), thickness=-1)
-        current_frame = cv2.line(current_frame, tuple(p_black), tuple(acc_2d),thickness=3, color=(0,255,255))
-        # w
+        # Speed of the central (black) point of R':
+        current_frame = cv2.circle(current_frame, (speed_2d[3,0],speed_2d[3,1]), radius=5, color=(0, 0, 0), thickness=-1)
+        current_frame = cv2.line(current_frame, tuple(p_black), tuple(speed_2d[3]),thickness=3, color=(0,0,0))
+        # Acc of the central (black) point of R'::
+        current_frame = cv2.circle(current_frame, (acc_2d[3,0],acc_2d[3,1]), radius=5, color=(0, 255, 255), thickness=-1)
+        current_frame = cv2.line(current_frame, tuple(p_black), tuple(acc_2d[3]),thickness=3, color=(0,255,255))
+        # w of the central (black) point of R':
         current_frame = cv2.circle(current_frame, (w_2d[0],w_2d[1]), radius=5, color=(255, 0, 255), thickness=-1)
         current_frame = cv2.line(current_frame, tuple(p_black), tuple(w_2d),thickness=3, color=(255,0,255))
 
@@ -236,13 +274,13 @@ if __name__ == '__main__':
         # Plot speed_3d
         #ax.plot([0, 0], [0, 0],[1, 0], 'yellow')
 
-        ax.plot([point_3D_prev[0], point_3D_prev[0] + speed_emwa[0]], [point_3D_prev[2], point_3D_prev[2] + speed_emwa[2]], [1 - point_3D_prev[1], 1 - point_3D_prev[1] - speed_emwa[1]], 'black')
+        ax.plot([points_3D_prev[3, 0], points_3D_prev[3, 0] + speed_emwa[3, 0]], [points_3D_prev[3, 2], points_3D_prev[3, 2] + speed_emwa[3, 2]], [1 - points_3D_prev[3, 1], 1 - points_3D_prev[3, 1] - speed_emwa[3, 1]], 'black')
 
         # Plot acc_3d
-        ax.plot([point_3D_prev[0], point_3D_prev[0] + acc_emwa[0]], [point_3D_prev[2], point_3D_prev[2] + acc_emwa[2]], [1 - point_3D_prev[1], 1 - point_3D_prev[1] - acc_emwa[1]], 'yellow')
+        ax.plot([points_3D_prev[3, 0], points_3D_prev[3, 0] + acc_emwa[3, 0]], [points_3D_prev[3, 2], points_3D_prev[3, 2] + acc_emwa[3, 2]], [1 - points_3D_prev[3, 1], 1 - points_3D_prev[3, 1] - acc_emwa[3, 1]], 'yellow')
 
         # Plot w_3d
-        ax.plot([point_3D_prev[0], point_3D_prev[0] + w_3d_emwa[0]], [point_3D_prev[2], point_3D_prev[2] + w_3d_emwa[2]], [1 - point_3D_prev[1], 1 - point_3D_prev[1] - w_3d_emwa[1]], 'magenta')
+        ax.plot([points_3D_prev[3, 0], points_3D_prev[3, 0] + w_3d_emwa[1]], [points_3D_prev[3, 2], points_3D_prev[3, 2] - w_3d_emwa[0]], [1 - points_3D_prev[3, 1], 1 - points_3D_prev[3, 1] + w_3d_emwa[2]], 'magenta')
 
 
         ax.set_xlim(-3,3)
