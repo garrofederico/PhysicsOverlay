@@ -1,2 +1,11 @@
 temp/*
 bin/*
+DATA/*
+TO_ANNOTATE/*
+.DS_Store
+.idea/
+CALIBRATION/*
+Test matplotlib.py
+test3.avi
+test4.avi
+/Visualizations workflow.ipynb

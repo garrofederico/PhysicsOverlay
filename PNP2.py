@@ -227,7 +227,7 @@ for idx, elm in enumerate(zip(rep_1, rep_2)):
 
     #out.write(cv2.imread('temp.jpg'))
 
-out = cv2.VideoWriter('test3.avi', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 60, (960, 1080))
+out = cv2.VideoWriter('test_fede.avi', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 60, (960, 1080))
 for x in range(len(rep_1)):
     fp_1 = os.path.join('temp', str(x).zfill(4) + '.jpg')
     fp_2 = os.path.join('temp', str(x).zfill(4) + '_3d.jpg')
