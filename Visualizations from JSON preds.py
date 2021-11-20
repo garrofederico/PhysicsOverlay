@@ -148,7 +148,7 @@ def draw_2D_projection(image, var_3D, rvec, tvec, K, dist, color=(0, 255, 255)):
     # Speed of the central (black) point of R':
     image = cv2.circle(image, (var_2D[3, 0], var_2D[3, 1]), radius=5, color=color,
                        thickness=-1)
-    image = cv2.line(image, tuple(points_2D[3]), tuple(var_2D[3]), thickness=3, color=color)
+    image = cv2.line(image, tuple(points_2D_emwa[3]), tuple(var_2D[3]), thickness=3, color=color)
 
 
 def calculate_w():
@@ -206,24 +206,24 @@ class MovingPoint:
             moving_point_2D = np.squeeze(moving_point_2D)
             moving_point_2D = np.array(moving_point_2D, dtype=np.int32)  # float to int conversion, for ops involving discrete pixels
 
-            # frame = draw_moving_point(frame, points_2D, points_2D_box, moving_point_2D)
+            # frame = draw_moving_point(frame, points_2D_emwa, points_2D_box_emwa, moving_point_2D)
 
             if self.moving_axis == 2:
                 if self.start_point[0] == 1:
                     # black frame line
-                    frame = cv2.line(frame, moving_point_2D, ((points_2D_box[2] + points_2D_box[3]) // 2), thickness=1, color=(0, 0, 0))
+                    frame = cv2.line(frame, moving_point_2D, ((points_2D_box_emwa[2] + points_2D_box_emwa[3]) // 2), thickness=1, color=(0, 0, 0))
                     # moving point line
-                    frame = cv2.line(frame, ((points_2D[2] + points_2D_box[1]) // 2), moving_point_2D, thickness=1, color=self.color)
+                    frame = cv2.line(frame, ((points_2D_emwa[2] + points_2D_box_emwa[1]) // 2), moving_point_2D, thickness=1, color=self.color)
                 else:
                     # black frame line
-                    frame = cv2.line(frame, moving_point_2D, ((points_2D[0] + points_2D_box[2]) // 2), thickness=1, color=(0, 0, 0))
+                    frame = cv2.line(frame, moving_point_2D, ((points_2D_emwa[0] + points_2D_box_emwa[2]) // 2), thickness=1, color=(0, 0, 0))
                     # moving point line
-                    frame = cv2.line(frame, ((points_2D[3] + points_2D[2]) // 2), moving_point_2D, thickness=1, color=self.color)
+                    frame = cv2.line(frame, ((points_2D_emwa[3] + points_2D_emwa[2]) // 2), moving_point_2D, thickness=1, color=self.color)
             if self.moving_axis == 1:
                 # black frame line
-                frame = cv2.line(frame, moving_point_2D, ((points_2D[1] + points_2D_box[0]) // 2), thickness=1, color=(0, 0, 0))
+                frame = cv2.line(frame, moving_point_2D, ((points_2D_emwa[1] + points_2D_box_emwa[0]) // 2), thickness=1, color=(0, 0, 0))
                 # moving point line
-                frame = cv2.line(frame, ((points_2D[3] + points_2D[0]) // 2), moving_point_2D, thickness=1, color=self.color)
+                frame = cv2.line(frame, ((points_2D_emwa[3] + points_2D_emwa[0]) // 2), moving_point_2D, thickness=1, color=self.color)
             if self.moving_axis == 0:
                 pass # to do
             # moving point
@@ -305,6 +305,12 @@ if __name__ == '__main__':
     _, rvec, tvec, _ = cv2.solvePnPRansac(mesh, points_3D_prev, K, dist, flags=cv2.SOLVEPNP_ITERATIVE)
     points_3D_prev, _, _ = project_points_intermediary(rvec, tvec, K, mesh)
 
+    # position exponential moving window average init:
+    points_2D_emwa = cv2.projectPoints(mesh, rvec, tvec, K, dist)[0]
+    points_2D_emwa = np.squeeze(points_2D_emwa)
+    points_2D_box_emwa = cv2.projectPoints(mesh_box, rvec, tvec, K, dist)[0]
+    points_2D_box_emwa = np.squeeze(points_2D_box_emwa)
+    beta_position_2D = 0.55
     # speed exponential moving window average init:
     speed_3D_emwa = 0
     beta_speed = 0.98
@@ -358,13 +364,20 @@ if __name__ == '__main__':
             # _, rvec, tvec, _ = cv2.solvePnPRansac(mesh, points, K, dist, flags=cv2.SOLVEPNP_ITERATIVE)
             points_3D, _, _ = project_points_intermediary(rvec, tvec, K, mesh)
             points_2D = cv2.projectPoints(mesh, rvec, tvec, K, dist)[0]
-            points_2D = np.array(points_2D, dtype=np.int32)  # float to int conversion, for ops involving discrete pixels
+            points_2D = np.squeeze(points_2D)
+            # Position 2D exponential moving weighted average
+            points_2D_emwa = beta_position_2D * points_2D_emwa + (1 - beta_position_2D) * points_2D
+            points_2D_emwa = np.array(points_2D_emwa, dtype=np.int32)#float to int conversion, for ops involving discrete pixels
 
 
             # Filling box projection
             points_2D_box = cv2.projectPoints(mesh_box, rvec, tvec, K, dist)[0]
             points_2D_box = np.array(points_2D_box,
                                      dtype=np.int32)  # float to int conversion, for ops involving discrete pixels
+            points_2D_box = np.squeeze(points_2D_box)
+            # Position 2D exponential moving weighted average
+            points_2D_box_emwa = beta_position_2D * points_2D_box_emwa + (1 - beta_position_2D) * points_2D_box
+            points_2D_box_emwa = np.array(points_2D_box_emwa, dtype=np.int32)#float to int conversion, for ops involving discrete pixels
 
             # Visualization:
             current_frame = cv2.imread(image_fp)
@@ -376,11 +389,11 @@ if __name__ == '__main__':
             # fixed frame lines:
             current_frame = draw_frame(current_frame, fixed_frame)
             # moving frame lines:
-            points_2D = np.squeeze(points_2D)
-            current_frame = draw_frame(current_frame, points_2D)
+            points_2D_emwa = np.squeeze(points_2D_emwa)
+            current_frame = draw_frame(current_frame, points_2D_emwa)
             # filling box
-            points_2D_box = np.squeeze(points_2D_box)
-            current_frame = draw_filling_box(current_frame, points_2D, points_2D_box)
+            points_2D_box_emwa = np.squeeze(points_2D_box_emwa)
+            current_frame = draw_filling_box(current_frame, points_2D_emwa, points_2D_box_emwa)
 
             # Calculation of speed_3D
             speed_3D = (points_3D - points_3D_prev) / d_time
@@ -415,7 +428,7 @@ if __name__ == '__main__':
             # w of the central (black) point of R':
 
             current_frame = cv2.circle(current_frame, (w_2d[0], w_2d[1]), radius=5, color=(255, 0, 255), thickness=-1)
-            current_frame = cv2.line(current_frame, tuple(points_2D[3]), tuple(w_2d), thickness=3, color=(255, 0, 255))
+            current_frame = cv2.line(current_frame, tuple(points_2D_emwa[3]), tuple(w_2d), thickness=3, color=(255, 0, 255))
 
             # Refresh of points 3D used in calculation of w and speed_3d
             points_3D_prev = points_3D
@@ -481,7 +494,7 @@ if __name__ == '__main__':
                 'rvec': rvec,
                 'tvec': tvec,
                 'points_3D': points_3D,
-                'points_2D': points_2D
+                'points_2D': points_2D_emwa
             }
 
             # print(results)
