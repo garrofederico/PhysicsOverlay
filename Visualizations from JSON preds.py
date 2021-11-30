@@ -287,7 +287,7 @@ if __name__ == '__main__':
     # DEBUG_OFFSET = 2734 # frame of error
     # DEBUG_OFFSET = 2400  # start of moving point 2
     # DEBUG_OFFSET = 2700 # testpoint
-    DEBUG_OFFSET = 1250
+    DEBUG_OFFSET = 1300
     # speed_3D variables init:
     frame_rate = 30  # Go Pro's frame rate
     d_time = 1 / frame_rate
@@ -310,7 +310,8 @@ if __name__ == '__main__':
     points_2D_emwa = np.squeeze(points_2D_emwa)
     points_2D_box_emwa = cv2.projectPoints(mesh_box, rvec, tvec, K, dist)[0]
     points_2D_box_emwa = np.squeeze(points_2D_box_emwa)
-    beta_position_2D = 0.55
+    frame_filter = 4
+    beta_position_2D = (frame_filter - 1 )/ float(frame_filter)
     # speed exponential moving window average init:
     speed_3D_emwa = 0
     beta_speed = 0.98
@@ -345,13 +346,15 @@ if __name__ == '__main__':
     pred_list = list(preds_json.values())
     for idx in range(len(pred_list)-DEBUG_OFFSET):
         idx += DEBUG_OFFSET
+        if idx < frame_filter: # to prevent invalid image filepath
+            idx = frame_filter
         pred = pred_list[idx]['pred']
         pred_not_empty = len(pred) > 0
         if pred_not_empty :
 
             print(idx)
             image_fp = os.path.join(IMAGES_PATH,
-                                    str(OFFSET + idx).zfill(5) + '.jpg')  # OFFSET is the begining of notation frames
+                                    str(OFFSET + idx - frame_filter).zfill(5) + '.jpg')  # OFFSET is the begining of notation frames
             assert os.path.exists(image_fp)
 
             pred_confidence = pred[0][0]
@@ -496,8 +499,13 @@ if __name__ == '__main__':
                 'points_3D': points_3D,
                 'points_2D': points_2D_emwa
             }
+            # if make_video and idx == DEBUG_OFFSET +200:
+            #     out.release()
+            #     out2.release()
+            #     break
 
-            # print(results)
+
+    # print(results)
             # print(rvec)
             # print(tvec)
 if make_video:
