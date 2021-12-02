@@ -75,14 +75,15 @@ def draw_filling_box(image, frame: np.array, box):
         p_m = points_2D_box[2][0]
         p_w = points_2D_box[3][0]
 Args:
+    :param box: a numpy array of shape (4,2)
+    :param frame: a numpy array of shape (4,2)
     file_loc (str): The file location of the spreadsheet
     print_cols (bool): A flag used to print the columns to the console
         (default is False)
 
 Returns:
     list: a list of strings representing the header columns
-    :param box: a numpy array of shape (4,2)
-    :param frame: a numpy array of shape (4,2)
+
 
     """
     # filling box lines:
@@ -287,7 +288,7 @@ if __name__ == '__main__':
     # DEBUG_OFFSET = 2734 # frame of error
     # DEBUG_OFFSET = 2400  # start of moving point 2
     # DEBUG_OFFSET = 2700 # testpoint
-    DEBUG_OFFSET = 1300
+    DEBUG_OFFSET = 300
     # speed_3D variables init:
     frame_rate = 30  # Go Pro's frame rate
     d_time = 1 / frame_rate
@@ -310,9 +311,18 @@ if __name__ == '__main__':
     points_2D_emwa = np.squeeze(points_2D_emwa)
     points_2D_box_emwa = cv2.projectPoints(mesh_box, rvec, tvec, K, dist)[0]
     points_2D_box_emwa = np.squeeze(points_2D_box_emwa)
-    frame_filter = 4
+    frame_filter = 3
     beta_position_2D = (frame_filter - 1 )/ float(frame_filter)
+
+    # position exponential moving window average init 3D:
+    points_3D_emwa = points_3D_prev
+    points_3D_emwa_prev = points_3D_emwa
+    # rmat and tvec ewma init:
+    rmat_ewma = np.zeros((3,3))
+    tvec_ewma = np.zeros((3,1))
+
     # speed exponential moving window average init:
+
     speed_3D_emwa = 0
     beta_speed = 0.98
 
@@ -354,15 +364,19 @@ if __name__ == '__main__':
 
             print(idx)
             image_fp = os.path.join(IMAGES_PATH,
-                                    str(OFFSET + idx - frame_filter).zfill(5) + '.jpg')  # OFFSET is the begining of notation frames
+                                    str(OFFSET + idx - frame_filter ).zfill(5) + '.jpg')  # OFFSET is the begining of notation frames
             assert os.path.exists(image_fp)
 
             pred_confidence = pred[0][0]
             rmat = np.array(pred[0][2])
-            rvec,_ = cv2.Rodrigues(rmat)
+            # ewma for R
+            rmat_ewma = beta_position_2D * rmat_ewma + (1 - beta_position_2D) * rmat
+            rvec,_ = cv2.Rodrigues(rmat_ewma)
             # rvec = rodrigues(rmat)
             tvec = np.array(pred[0][3])
-
+            # ewma for t
+            tvec_ewma = beta_position_2D * tvec_ewma + (1 - beta_position_2D) * tvec
+            tvec = tvec_ewma
 
             # _, rvec, tvec, _ = cv2.solvePnPRansac(mesh, points, K, dist, flags=cv2.SOLVEPNP_ITERATIVE)
             points_3D, _, _ = project_points_intermediary(rvec, tvec, K, mesh)
@@ -370,6 +384,9 @@ if __name__ == '__main__':
             points_2D = np.squeeze(points_2D)
             # Position 2D exponential moving weighted average
             points_2D_emwa = beta_position_2D * points_2D_emwa + (1 - beta_position_2D) * points_2D
+            points_2D_emwa = np.array(points_2D_emwa, dtype=np.int32)#float to int conversion, for ops involving discrete pixels
+            # Position 2D exponential moving weighted average
+            points_3D_emwa = beta_position_2D * points_3D_emwa + (1 - beta_position_2D) * points_3D
             points_2D_emwa = np.array(points_2D_emwa, dtype=np.int32)#float to int conversion, for ops involving discrete pixels
 
 
