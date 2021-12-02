@@ -9,3 +9,6 @@ Test matplotlib.py
 test3.avi
 test4.avi
 /Visualizations workflow.ipynb
+/BOP DATASET/Repere_dataset_bop/input/*
+/BOP DATASET/Repere_dataset_bop/output/*
+BOP DATASET/__pycache__/*
