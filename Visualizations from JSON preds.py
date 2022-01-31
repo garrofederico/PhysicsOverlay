@@ -109,26 +109,26 @@ Returns:
     return image
 
 
-def draw_moving_point(image, frame, box, moving_point_2D):
-
-    # black frame line
-    image = cv2.line(image, moving_point_2D, ((box[2] + box[3]) // 2), thickness=1, color=(0, 0, 0))
-    # image = cv2.line(image, moving_point_2D, ((frame[1] + box[0]) // 2), thickness=1, color=(0, 0, 0))
-    # moving point
-    image = cv2.circle(image, (moving_point_2D[0], moving_point_2D[1]), radius=8, color=(0, 255, 100),
-                       thickness=-1)
-    # moving point line
-    image = cv2.line(image, ((frame[2] + box[1]) // 2), moving_point_2D, thickness=1, color=(0, 255, 100))
-    # image = cv2.line(image, ((frame[3] + frame[0]) // 2), moving_point_2D, thickness=1, color=(0, 255, 100))
-    mp_trajectory_2D.append(moving_point_2D)
-    for p in mp_trajectory_2D:
-        image = cv2.circle(image, (p[0], p[1]), radius=4, color=(0, 255, 100), thickness=-1)
-    #moving_point_3D, _, _ = project_points_intermediary(rvec, tvec, K, np.expand_dims(moving_point, 2))
-    # moving_point_3D = np.squeeze(moving_point_3D) reshape en vez
-    #mp_trajectory_3D.append(moving_point_3D)
-    # Plot point trajectory
-    # ax.plot(mp_trajectory_3D[1], -mp_trajectory_3D[0], mp_trajectory_3D[2], 'black')
-    return image
+# def draw_moving_point(image, frame, box, moving_point_2D):
+#
+#     # black frame line
+#     image = cv2.line(image, moving_point_2D, ((box[2] + box[3]) // 2), thickness=1, color=(0, 0, 0))
+#     # image = cv2.line(image, moving_point_2D, ((frame[1] + box[0]) // 2), thickness=1, color=(0, 0, 0))
+#     # moving point
+#     image = cv2.circle(image, (moving_point_2D[0], moving_point_2D[1]), radius=8, color=(0, 255, 100),
+#                        thickness=-1)
+#     # moving point line
+#     image = cv2.line(image, ((frame[2] + box[1]) // 2), moving_point_2D, thickness=1, color=(0, 255, 100))
+#     # image = cv2.line(image, ((frame[3] + frame[0]) // 2), moving_point_2D, thickness=1, color=(0, 255, 100))
+#     mp_trajectory_2D.append(moving_point_2D)
+#     for p in mp_trajectory_2D:
+#         image = cv2.circle(image, (p[0], p[1]), radius=4, color=(0, 255, 100), thickness=-1)
+#     #moving_point_3D, _, _ = project_points_intermediary(rvec, tvec, K, np.expand_dims(moving_point, 2))
+#     # moving_point_3D = np.squeeze(moving_point_3D) reshape en vez
+#     #mp_trajectory_3D.append(moving_point_3D)
+#     # Plot point trajectory
+#     # ax.plot(mp_trajectory_3D[1], -mp_trajectory_3D[0], mp_trajectory_3D[2], 'black')
+#     return image
 
 
 def draw_2D_projection(image, var_3D, rvec, tvec, K, dist, color=(0, 255, 255)):
@@ -195,7 +195,9 @@ class MovingPoint:
         self.color = color
         self.mp_trajectory_2D = []
 
+
     def draw(self, index, frame):
+        n = 3
         if self.active_range[0] <= index <= self.active_range[1]:
             moving_point = np.array([
                 self.start_point[0], self.start_point[1] , self.start_point[2]
@@ -206,36 +208,37 @@ class MovingPoint:
             moving_point_2D = cv2.projectPoints(moving_point, rvec, tvec, K, dist)[0]
             moving_point_2D = np.squeeze(moving_point_2D)
             moving_point_2D = np.array(moving_point_2D, dtype=np.int32)  # float to int conversion, for ops involving discrete pixels
+            self.mp_trajectory_2D.append(moving_point_2D)
+            while len(self.mp_trajectory_2D) <= n: #fill with repeated points for the delay
+                self.mp_trajectory_2D.append(moving_point_2D)
 
             # frame = draw_moving_point(frame, points_2D_emwa, points_2D_box_emwa, moving_point_2D)
 
             if self.moving_axis == 2:
                 if self.start_point[0] == 1:
                     # black frame line
-                    frame = cv2.line(frame, moving_point_2D, ((points_2D_box_emwa[2] + points_2D_box_emwa[3]) // 2), thickness=1, color=(0, 0, 0))
+                    frame = cv2.line(frame, self.mp_trajectory_2D[-n], ((points_2D_box_emwa[2] + points_2D_box_emwa[3]) // 2), thickness=1, color=(0, 0, 0))
                     # moving point line
-                    frame = cv2.line(frame, ((points_2D_emwa[2] + points_2D_box_emwa[1]) // 2), moving_point_2D, thickness=1, color=self.color)
+                    frame = cv2.line(frame, ((points_2D_emwa[2] + points_2D_box_emwa[1]) // 2), self.mp_trajectory_2D[-n], thickness=1, color=self.color)
                 else:
                     # black frame line
-                    frame = cv2.line(frame, moving_point_2D, ((points_2D_emwa[0] + points_2D_box_emwa[2]) // 2), thickness=1, color=(0, 0, 0))
+                    frame = cv2.line(frame, self.mp_trajectory_2D[-n], ((points_2D_emwa[0] + points_2D_box_emwa[2]) // 2), thickness=1, color=(0, 0, 0))
                     # moving point line
-                    frame = cv2.line(frame, ((points_2D_emwa[3] + points_2D_emwa[2]) // 2), moving_point_2D, thickness=1, color=self.color)
+                    frame = cv2.line(frame, ((points_2D_emwa[3] + points_2D_emwa[2]) // 2), self.mp_trajectory_2D[-n], thickness=1, color=self.color)
             if self.moving_axis == 1:
                 # black frame line
-                frame = cv2.line(frame, moving_point_2D, ((points_2D_emwa[1] + points_2D_box_emwa[0]) // 2), thickness=1, color=(0, 0, 0))
+                frame = cv2.line(frame, self.mp_trajectory_2D[-n], ((points_2D_emwa[1] + points_2D_box_emwa[0]) // 2), thickness=1, color=(0, 0, 0))
                 # moving point line
-                frame = cv2.line(frame, ((points_2D_emwa[3] + points_2D_emwa[0]) // 2), moving_point_2D, thickness=1, color=self.color)
+                frame = cv2.line(frame, ((points_2D_emwa[3] + points_2D_emwa[0]) // 2), self.mp_trajectory_2D[-n], thickness=1, color=self.color)
             if self.moving_axis == 0:
                 pass # to do
             # moving point
-            frame = cv2.circle(frame, (moving_point_2D[0], moving_point_2D[1]), radius=8, color=self.color,
+            frame = cv2.circle(frame, (self.mp_trajectory_2D[-n][0], self.mp_trajectory_2D[-n][1]), radius=8, color=self.color,
                                thickness=-1)
 
 
-            self.mp_trajectory_2D.append(moving_point_2D)
-
             # frame = cv2.polylines(frame, np.reshape(self.mp_trajectory_2D, (-1,1,2)), isClosed=1, color=self.color, thickness =1)
-            for p in self.mp_trajectory_2D:
+            for p in self.mp_trajectory_2D[:-n]:
                 frame = cv2.circle(frame, (p[0], p[1]), radius=4, color=self.color, thickness=-1)
         return frame
 
@@ -288,7 +291,8 @@ if __name__ == '__main__':
     # DEBUG_OFFSET = 2734 # frame of error
     # DEBUG_OFFSET = 2400  # start of moving point 2
     # DEBUG_OFFSET = 2700 # testpoint
-    DEBUG_OFFSET = 300
+    # DEBUG_OFFSET = 1300
+    DEBUG_OFFSET = 0
     # speed_3D variables init:
     frame_rate = 30  # Go Pro's frame rate
     d_time = 1 / frame_rate
@@ -338,8 +342,7 @@ if __name__ == '__main__':
     # w_3d exponential moving window average init:
     w_3D_emwa = 0
     beta_w_3d = 0.9
-    # moving point trajectory init
-    mp_trajectory_2D = []
+
 
 
 
