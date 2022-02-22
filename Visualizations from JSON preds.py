@@ -379,11 +379,12 @@ if __name__ == '__main__':
     beta_position_2D = (frame_filter - 1 )/ float(frame_filter)
 
     # position exponential moving window average init 3D:
+    points_3D_prev =  poses[0 + DEBUG_OFFSET][2]
     points_3D_emwa = points_3D_prev
     points_3D_emwa_prev = points_3D_emwa
-    # rmat and tvec ewma init:
-    rmat_ewma = np.zeros((3,3))
-    tvec_ewma = np.zeros((3,1))
+    # rvec and tvec ewma init:
+    rvec_ewma = poses[0 + DEBUG_OFFSET][0][0]#np.zeros((3, 1))
+    tvec_ewma = poses[0 + DEBUG_OFFSET][0][1]# np.zeros((3, 1))
 
     # speed exponential moving window average init:
 
@@ -415,31 +416,31 @@ if __name__ == '__main__':
     moving_p1 = MovingPoint([1250, 1700],(1, 0.5, 0), 2, MESH_SIZE, color=(0, 110, 100))
     moving_p2 = MovingPoint([1850, 2250], (0.5, 0, 0), 2, MESH_SIZE, color=(100, 0, 100))
     moving_p3 = MovingPoint([2420, 2800], (0, 0, 0.5), 1, MESH_SIZE, color=(100, 50, 200))
+
+
     ######## FRAME LOOP #########
-    pred_list = list(preds_json.values())
-    for idx in range(len(pred_list)-DEBUG_OFFSET):
+    for idx in range(len(poses)-DEBUG_OFFSET):
         idx += DEBUG_OFFSET
         if idx < frame_filter: # to prevent invalid image filepath
             idx = frame_filter
-        pred = pred_list[idx]['pred']
-        pred_not_empty = len(pred) > 0
-        if pred_not_empty :
+
+        pose = poses[idx]
+        if pose is not None:
 
             print(idx)
             image_fp = os.path.join(IMAGES_PATH,
                                     str(OFFSET + idx - frame_filter ).zfill(5) + '.jpg')  # OFFSET is the begining of notation frames
             assert os.path.exists(image_fp)
+            # Unpack pose values
+            rvec, tvec = pose[0][0], pose[0][1],
 
-            pred_confidence = pred[0][0]
-            rmat = np.array(pred[0][2])
             # ewma for R
-            rmat_ewma = beta_position_2D * rmat_ewma + (1 - beta_position_2D) * rmat
-            rvec,_ = cv2.Rodrigues(rmat_ewma)
-            # rvec = rodrigues(rmat)
-            tvec = np.array(pred[0][3])
+            rvec_ewma = beta_position_2D * rvec_ewma + (1 - beta_position_2D) * rvec
             # ewma for t
             tvec_ewma = beta_position_2D * tvec_ewma + (1 - beta_position_2D) * tvec
             tvec = tvec_ewma
+            # refactorizar tvec por tvec_ewma y hacer lo mismo con rvec para ver si esta filtrado
+            rvec = rvec_ewma
 
             # _, rvec, tvec, _ = cv2.solvePnPRansac(mesh, points, K, dist, flags=cv2.SOLVEPNP_ITERATIVE)
             points_3D, _, _ = project_points_intermediary(rvec, tvec, K, mesh)
@@ -586,8 +587,8 @@ if __name__ == '__main__':
 
 
     # print(results)
-            # print(rvec)
-            # print(tvec)
+    # print(rvec)
+    # print(tvec)
 if make_video:
     out.release()
     out2.release()
