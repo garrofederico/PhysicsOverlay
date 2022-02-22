@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 # next 3 lines absolutely important for real time plot in Pycharm:
 import matplotlib
 import math
+import yaml
 
 matplotlib.use("TkAgg")
 
@@ -242,7 +243,75 @@ class MovingPoint:
                 frame = cv2.circle(frame, (p[0], p[1]), radius=4, color=self.color, thickness=-1)
         return frame
 
+
+def get_poses_from_annotations(cfg):
+    # Retrieve annotated points from Cvat xml file
+    # Returns "format"
+    tree = ET.parse(cfg["SETUP"]["ANNOTATIONS_PATH"])
+    root = tree.getroot()
+    poses_from_annotations = []
+    for c in root[2:]:
+        points = []
+        for point in c[:N_KEYPOINTS]:
+            x, y = point.attrib['points'].split(',')
+            x = float(x)
+            y = float(y)
+            points.append([x, y])
+        points = np.array(points, dtype=np.float32)
+        points = np.reshape(points, (N_KEYPOINTS, 2, 1))
+
+        _, rvec, tvec, _ = cv2.solvePnPRansac(mesh, points, K, dist, flags=cv2.SOLVEPNP_ITERATIVE)
+        points_3D, _, _ = project_points_intermediary(rvec, tvec, K, mesh)
+        points_2D = cv2.projectPoints(mesh, rvec, tvec, K, dist)[0]
+        points_2D = np.squeeze(points_2D)
+        points_2D = np.array(points_2D,
+                             dtype=np.int32)  # float to int conversion, for ops involving discrete pixels
+        poses_from_annotations.append([(rvec, tvec), points_2D, points_3D])
+    return poses_from_annotations
+
+
+def get_poses_from_predictions(cfg):
+    poses_from_preds = []
+    preds_json = json.load(open(cfg["SETUP"]["PREDS_PATH"]))
+    pred_list = list(preds_json.values())
+    for pred in pred_list:
+        pred = pred['pred']
+        pred_not_empty = len(pred) > 0
+        if pred_not_empty:
+
+            pred_confidence = pred[0][0]
+            rmat = np.array(pred[0][2])
+            rvec, _ = cv2.Rodrigues(rmat)
+            tvec = np.array(pred[0][3])
+            points_3D, _, _ = project_points_intermediary(rvec, tvec, K, mesh)
+            points_2D = cv2.projectPoints(mesh, rvec, tvec, K, dist)[0]
+            points_2D = np.squeeze(points_2D)
+            # _, rvec, tvec, _ = cv2.solvePnPRansac(mesh, points, K, dist, flags=cv2.SOLVEPNP_ITERATIVE)
+            poses_from_preds.append([(rvec, tvec), points_2D, points_3D, pred_confidence])
+        else:
+            # TODO: interpolate when empty pred
+            # find next valid prediction
+            # count all the empty ones
+            # interpolate
+            poses_from_preds.append(None)
+    return poses_from_preds
+
+
+def get_config_file(config_file):
+    assert os.path.exists(config_file)
+    with open(config_file, "r") as stream:
+        try:
+            cfg = yaml.safe_load(stream)
+
+        except yaml.YAMLError as exc:
+            print(exc)
+    return cfg
+
 if __name__ == '__main__':
+    config_file = 'CONFIGS/object-video_name.yaml'
+
+    cfg = get_config_file(config_file)
+
     INTRINSICS_FILE = os.path.abspath('../physic_overlay_codebase/CALIBRATION/intrinsics.json')
     # INTRINSICS_FILE = os.path.abspath('../CALIBRATION/intrinsics.json')
     MESH = os.path.abspath('MESH/repere.json')
@@ -255,13 +324,19 @@ if __name__ == '__main__':
     IMAGES_PATH = os.path.abspath('../physic_overlay_codebase/DATA/6_2/GH010483/')
     # IMAGES_PATH = os.path.abspath('../physic_overlay_codebase/DATA/6_2/GH010484/')
     # IMAGES_PATH = os.path.abspath('../DATA/6_2/GH010434/')
-    ANNOTATIONS_PATH = 'ANNOTATIONS/' + CAMERA + '-' + EXPERIMENT + '_points.xml'
+    # ANNOTATIONS_PATH = 'ANNOTATIONS/' + CAMERA + '-' + EXPERIMENT + '_points.xml'
 
     #Repere Size
     MESH_SIZE = 37
 
-    loaded_json = json.load(open(INTRINSICS_FILE))
-    K = np.array(loaded_json[CAMERA]['K_new'], dtype=np.float32)
+    # get yaml config file
+
+
+
+
+
+    intrinsics_json = json.load(open(os.path.abspath(cfg["SETUP"]["INTRINSICS_FILE"])))
+    K = np.array(intrinsics_json[CAMERA]['K_new'], dtype=np.float32)
     dist = None  # loaded_json['6_2']['dist']
     mesh = np.array(json.load(open(MESH))["points"], dtype=np.float32)
     mesh = np.reshape(mesh, (N_KEYPOINTS, 3, 1))
@@ -273,47 +348,32 @@ if __name__ == '__main__':
         [1, 0, 1],
         [1, 1, 1]
     ], dtype=np.float32)
-    # Retrieve annotated points from Cvat
-    tree = ET.parse(ANNOTATIONS_PATH)
-    root = tree.getroot()
-    all_results = {
-        ''
-    }
     ########## Start of script #####################
-    PREDS_PATH = 'ANNOTATIONS/' + CAMERA + '-' + EXPERIMENT + '_preds.json'
-    preds_json = json.load(open(PREDS_PATH))
 
     # Matplotlib plot init:
     ax = plt.axes(projection='3d')
 
-    # change to select specific parts of the video, for debugging purposes, if not in use, set it to 0
-    # DEBUG_OFFSET = 2173 # frame of error
-    # DEBUG_OFFSET = 2734 # frame of error
-    # DEBUG_OFFSET = 2400  # start of moving point 2
-    # DEBUG_OFFSET = 2700 # testpoint
-    # DEBUG_OFFSET = 1300
-    DEBUG_OFFSET = 0
+    DEBUG_OFFSET = cfg["SETUP"]["DEBUG_OFFSET"]
     # speed_3D variables init:
     frame_rate = 30  # Go Pro's frame rate
     d_time = 1 / frame_rate
 
-    # retrieve initial position from xml files
-    points_3D_prev = [] #TODO : retrieve initial point from JSON file
-    t = root[2 + DEBUG_OFFSET:][0]
-    for p in t[:N_KEYPOINTS]:
-        x, y = p.attrib['points'].split(',')
-        x = float(x)
-        y = float(y)
-        points_3D_prev.append([x, y])
-    points_3D_prev = np.array(points_3D_prev, dtype=np.float32)
-    points_3D_prev = np.reshape(points_3D_prev, (N_KEYPOINTS, 2, 1))
-    _, rvec, tvec, _ = cv2.solvePnPRansac(mesh, points_3D_prev, K, dist, flags=cv2.SOLVEPNP_ITERATIVE)
-    points_3D_prev, _, _ = project_points_intermediary(rvec, tvec, K, mesh)
+
+
+    assert cfg["SETUP"]["POSES_FROM"] == 'annotations' or cfg["SETUP"]["POSES_FROM"] == 'predictions'\
+            , "POSES_FROM in config file has to be 'annotations' or 'predictions' "
+    if cfg["SETUP"]["POSES_FROM"] == 'predictions':
+        poses = get_poses_from_predictions(cfg)
+    if cfg["SETUP"]["POSES_FROM"] == 'annotations':
+        poses = get_poses_from_annotations(cfg)
+
+
+
 
     # position exponential moving window average init:
-    points_2D_emwa = cv2.projectPoints(mesh, rvec, tvec, K, dist)[0]
+    points_2D_emwa = cv2.projectPoints(mesh, poses[0 + DEBUG_OFFSET][0][0], poses[0 + DEBUG_OFFSET][0][1], K, dist)[0]
     points_2D_emwa = np.squeeze(points_2D_emwa)
-    points_2D_box_emwa = cv2.projectPoints(mesh_box, rvec, tvec, K, dist)[0]
+    points_2D_box_emwa = cv2.projectPoints(mesh_box, poses[0 + DEBUG_OFFSET][0][0], poses[0 + DEBUG_OFFSET][0][1], K, dist)[0]
     points_2D_box_emwa = np.squeeze(points_2D_box_emwa)
     frame_filter = 3
     beta_position_2D = (frame_filter - 1 )/ float(frame_filter)
