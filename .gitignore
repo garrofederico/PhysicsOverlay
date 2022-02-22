@@ -12,3 +12,54 @@ test4.avi
 /BOP DATASET/Repere_dataset_bop/input/*
 /BOP DATASET/Repere_dataset_bop/output/*
 BOP DATASET/__pycache__/*
+/Outputs/rendered videos/experiment3/1- only FoRs.avi
+/Outputs/rendered videos/experiment4/1- point at 1,0.5,x.avi
+/Outputs/rendered videos/experiment3/2- moving point only.avi
+/Outputs/rendered videos/experiment4/2- point at 0,x, 0.5.avi
+/Outputs/rendered videos/experiment3/3- moving point + acc + v + w.avi
+/Outputs/rendered videos/experiment3/4- acc + v.avi
+/Outputs/rendered videos/experiment3/5- w.avi
+/Outputs/rendered videos/experiment3/6- acc + v + w.avi
+/weights/train_repere_13_oct/_data_Repere_10_validation_000000_rgb_000001_gt.png
+/weights/train_repere_13_oct/_data_Repere_10_validation_000000_rgb_000001_pred.png
+/weights/train_repere_13_oct/_data_Repere_10_validation_000000_rgb_000081_gt.png
+/weights/train_repere_13_oct/_data_Repere_10_validation_000000_rgb_000081_pred.png
+/weights/train_repere_13_oct/_data_Repere_10_validation_000000_rgb_000161_gt.png
+/weights/train_repere_13_oct/_data_Repere_10_validation_000000_rgb_000161_pred.png
+/weights/train_repere_13_oct/_data_Repere_10_validation_000000_rgb_000241_gt.png
+/weights/train_repere_13_oct/_data_Repere_10_validation_000000_rgb_000241_pred.png
+/weights/train_repere_13_oct/_data_Repere_10_validation_000000_rgb_000321_gt.png
+/weights/train_repere_13_oct/_data_Repere_10_validation_000000_rgb_000321_pred.png
+/weights/train_repere_13_oct/cfg.json
+/weights/train_repere_13_oct/events.out.tfevents.1634127443.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/ADI/class_00/ADI.05d/events.out.tfevents.1634129645.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/ADI/class_00/ADI.10d/events.out.tfevents.1634129645.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/ADI/class_00/ADI.20d/events.out.tfevents.1634129645.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/ADI/class_00/ADI.50d/events.out.tfevents.1634129645.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/REP/class_00/REP02px/events.out.tfevents.1634129645.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/REP/class_00/REP05px/events.out.tfevents.1634129645.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/REP/class_00/REP10px/events.out.tfevents.1634129645.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/ADI/all_class/ADI.05d/events.out.tfevents.1634129646.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/ADI/all_class/ADI.10d/events.out.tfevents.1634129646.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/ADI/all_class/ADI.20d/events.out.tfevents.1634129646.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/ADI/all_class/ADI.50d/events.out.tfevents.1634129646.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/REP/all_class/REP02px/events.out.tfevents.1634129646.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/REP/all_class/REP05px/events.out.tfevents.1634129646.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/REP/all_class/REP10px/events.out.tfevents.1634129646.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/REP/all_class/REP20px/events.out.tfevents.1634129646.garro-wide-depth-range-repere-0-0
+/weights/train_repere_13_oct/REP/class_00/REP20px/events.out.tfevents.1634129646.garro-wide-depth-range-repere-0-0
+/Outputs/experiment3_3D.avi
+/Outputs/experiment4_3D.avi
+/Outputs/NN_ewma_2 frames.avi
+/Outputs/NN_ewma_ 3frames.avi
+/Outputs/NN_ewma_ 4frames.avi
+/Outputs/NN_Kalman.avi
+/output_video.avi
+/MESH/other formats/repere.glb
+/MESH/other formats/repere.obj
+/MESH/other formats/repere.ply
+/MESH/other formats/repere.stl
+/MESH/other formats/Repère.mtl
+/requirements.txt
+/test_fede.avi
+/tests in general.ipynb
