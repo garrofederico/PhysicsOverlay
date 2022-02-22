@@ -198,6 +198,9 @@ class MovingPoint:
 
 
     def draw(self, index, frame):
+        #TODO: add variable rvec_ewma and tvec_ewma to avoid name shadowing with global variables
+        # TODO: FIX n = 3 with parameter
+        # TODO: Why tvec and rvec are different here than in the loop
         n = 3
         if self.active_range[0] <= index <= self.active_range[1]:
             moving_point = np.array([
@@ -206,7 +209,7 @@ class MovingPoint:
             moving_point[self.moving_axis] += (index - self.active_range[0]) / (self.active_range[1] - self.active_range[0])
             moving_point = self.mesh_size * moving_point
 
-            moving_point_2D = cv2.projectPoints(moving_point, rvec, tvec, K, dist)[0]
+            moving_point_2D = cv2.projectPoints(moving_point, rvec_ewma, tvec_ewma, K, dist)[0]
             moving_point_2D = np.squeeze(moving_point_2D)
             moving_point_2D = np.array(moving_point_2D, dtype=np.int32)  # float to int conversion, for ops involving discrete pixels
             self.mp_trajectory_2D.append(moving_point_2D)
@@ -261,12 +264,13 @@ def get_poses_from_annotations(cfg):
         points = np.reshape(points, (N_KEYPOINTS, 2, 1))
 
         _, rvec, tvec, _ = cv2.solvePnPRansac(mesh, points, K, dist, flags=cv2.SOLVEPNP_ITERATIVE)
+        rmat, _ = cv2.Rodrigues(rvec)
         points_3D, _, _ = project_points_intermediary(rvec, tvec, K, mesh)
         points_2D = cv2.projectPoints(mesh, rvec, tvec, K, dist)[0]
         points_2D = np.squeeze(points_2D)
         points_2D = np.array(points_2D,
                              dtype=np.int32)  # float to int conversion, for ops involving discrete pixels
-        poses_from_annotations.append([(rvec, tvec), points_2D, points_3D])
+        poses_from_annotations.append([(rmat, tvec), points_2D, points_3D])
     return poses_from_annotations
 
 
@@ -287,7 +291,7 @@ def get_poses_from_predictions(cfg):
             points_2D = cv2.projectPoints(mesh, rvec, tvec, K, dist)[0]
             points_2D = np.squeeze(points_2D)
             # _, rvec, tvec, _ = cv2.solvePnPRansac(mesh, points, K, dist, flags=cv2.SOLVEPNP_ITERATIVE)
-            poses_from_preds.append([(rvec, tvec), points_2D, points_3D, pred_confidence])
+            poses_from_preds.append([(rmat, tvec), points_2D, points_3D, pred_confidence])
         else:
             # TODO: interpolate when empty pred
             # find next valid prediction
@@ -383,8 +387,8 @@ if __name__ == '__main__':
     points_3D_emwa = points_3D_prev
     points_3D_emwa_prev = points_3D_emwa
     # rvec and tvec ewma init:
-    rvec_ewma = poses[0 + DEBUG_OFFSET][0][0]#np.zeros((3, 1))
-    tvec_ewma = poses[0 + DEBUG_OFFSET][0][1]# np.zeros((3, 1))
+    rmat_ewma = poses[0 + DEBUG_OFFSET][0][0]
+    tvec_ewma = poses[0 + DEBUG_OFFSET][0][1]
 
     # speed exponential moving window average init:
 
@@ -435,16 +439,14 @@ if __name__ == '__main__':
             rvec, tvec = pose[0][0], pose[0][1],
 
             # ewma for R
-            rvec_ewma = beta_position_2D * rvec_ewma + (1 - beta_position_2D) * rvec
-            # ewma for t
+            rmat_ewma = beta_position_2D * rmat_ewma + (1 - beta_position_2D) * rvec
+            rvec_ewma, _ = cv2.Rodrigues(rmat_ewma)
+            # ewma for Tvec
             tvec_ewma = beta_position_2D * tvec_ewma + (1 - beta_position_2D) * tvec
-            tvec = tvec_ewma
-            # refactorizar tvec por tvec_ewma y hacer lo mismo con rvec para ver si esta filtrado
-            rvec = rvec_ewma
 
             # _, rvec, tvec, _ = cv2.solvePnPRansac(mesh, points, K, dist, flags=cv2.SOLVEPNP_ITERATIVE)
-            points_3D, _, _ = project_points_intermediary(rvec, tvec, K, mesh)
-            points_2D = cv2.projectPoints(mesh, rvec, tvec, K, dist)[0]
+            points_3D, _, _ = project_points_intermediary(rvec_ewma, tvec_ewma, K, mesh)
+            points_2D = cv2.projectPoints(mesh, rvec_ewma, tvec_ewma, K, dist)[0]
             points_2D = np.squeeze(points_2D)
             # Position 2D exponential moving weighted average
             points_2D_emwa = beta_position_2D * points_2D_emwa + (1 - beta_position_2D) * points_2D
@@ -455,7 +457,7 @@ if __name__ == '__main__':
 
 
             # Filling box projection
-            points_2D_box = cv2.projectPoints(mesh_box, rvec, tvec, K, dist)[0]
+            points_2D_box = cv2.projectPoints(mesh_box, rvec_ewma, tvec_ewma, K, dist)[0]
             points_2D_box = np.array(points_2D_box,
                                      dtype=np.int32)  # float to int conversion, for ops involving discrete pixels
             points_2D_box = np.squeeze(points_2D_box)
@@ -485,7 +487,7 @@ if __name__ == '__main__':
             speed_3D_emwa = beta_speed * speed_3D_emwa + (1 - beta_speed) * speed_3D
 
             # 2D speed projection
-            draw_2D_projection(current_frame, speed_3D_emwa, rvec, tvec, K, dist, color=(0, 255, 255))
+            draw_2D_projection(current_frame, speed_3D_emwa, rvec_ewma, tvec_ewma, K, dist, color=(0, 255, 255))
 
             # Calculation of acc_3D
             acc_3D = (speed_3D_emwa - speed_emwa_prev) / d_time
@@ -494,7 +496,7 @@ if __name__ == '__main__':
             acc_3D_emwa = beta_acc * acc_3D_emwa + (1 - beta_acc) * acc_3D
 
             # 2D acc projection
-            draw_2D_projection(current_frame, acc_3D_emwa, rvec, tvec, K, dist, color=(0, 128, 255))
+            draw_2D_projection(current_frame, acc_3D_emwa, rvec_ewma, tvec_ewma, K, dist, color=(0, 128, 255))
 
             # Calculation of w (returns a single 3D point
 
@@ -505,7 +507,7 @@ if __name__ == '__main__':
             # 2D value to visualize in image
 
 
-            w_2d = cv2.projectPoints(w_3D_emwa, rvec, tvec, K, dist)[0]
+            w_2d = cv2.projectPoints(w_3D_emwa, rvec_ewma, tvec_ewma, K, dist)[0]
             w_2d = np.squeeze(w_2d)  # change the shape from the output from projectPoints
             w_2d = np.array(w_2d, dtype=np.int32)
 
@@ -575,8 +577,8 @@ if __name__ == '__main__':
             # ax.cla()
             results = {
                 'image_fp': os.path.abspath(image_fp),
-                'rvec': rvec,
-                'tvec': tvec,
+                'rvec_ewma': rvec_ewma,
+                'tvec': tvec_ewma,
                 'points_3D': points_3D,
                 'points_2D': points_2D_emwa
             }
@@ -587,8 +589,8 @@ if __name__ == '__main__':
 
 
     # print(results)
-    # print(rvec)
-    # print(tvec)
+    # print(rvec_ewma)
+    # print(tvec_ewma)
 if make_video:
     out.release()
     out2.release()
