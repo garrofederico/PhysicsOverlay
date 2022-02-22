@@ -1,0 +1,75 @@
+
+
+SETUP:
+  ANNOTATIONS_PATH: 'ANNOTATIONS/6_2-experiment3_points.xml'
+  PREDS_PATH: 'ANNOTATIONS/6_2-experiment3_preds.json'
+  INTRINSICS_FILE: '../physic_overlay_codebase/CALIBRATION/intrinsics.json'
+  DEBUG_OFFSET: 0 # change to select specific parts of the video, for debugging purposes, if not in use, set it to 0
+  # DEBUG_OFFSET : 2173 # frame of error
+  # DEBUG_OFFSET : 2734 # frame of error
+  # DEBUG_OFFSET : 2400  # start of moving point 2
+  # DEBUG_OFFSET : 2700 # testpoint
+  # DEBUG_OFFSET : 1300
+  POSES_FROM: "predictions" # Choose between "annotations" or "predictions"
+  LOCAL: True
+
+ROI:
+  N_LINES: 3
+  LINE_WIDTHS: [0,5]
+  N_CIRCLES: 3
+  CIRCLES_RADIUS: [10,20]
+
+TEST:
+
+  BATCH_SIZE: 4
+  CUDA: False
+  MODEL_WEIGHTS: 'weights/segmentation/130_segmentor.tar'
+
+INPUT:
+  SOURCE: '/Users/federico/Desktop/cvlabdata2/cvlab/datasets_federico/Datasets/dislocations/ALL_DATA_fixed_bottom_img_with_semantics_resized/'
+  #  SOURCE: 'D:\Datasets\dislocations\ALL_DATA_fixed_bottom_resized\'
+  #/cvlabdata2/cvlab/datasets_federico/Datasets/dislocations/ALL_DATA_fixed_bottom_img_with_semantics_resized/train/left_image
+
+TRAINING:
+
+  ONLY_SAVE_FEATURES: False
+  MODEL: 'unet-efficient'
+  MODEL_DIR: 'models_effnet0_features/'
+  SAVE_MODEL_STEP: 10
+  AUGMENTATION: True
+
+  LOSS: 'bce'
+
+  EXPERIMENT_NAME: 'dislocations_segmentation_effnet-b0'
+  TRAINING_SET: 'dislocations' # possible 'us3d', 'dislocations'
+  NUM_CHANNELS: 1
+
+  NUM_WORKERS: 4
+  PIN_MEMORY: True
+
+  RESUME: ''
+  START_EPOCH: 0
+  EPOCHS: 150
+
+  BATCH_SIZE: 2
+  TEST_BATCH_SIZE: 2
+
+  BASE_LR: 0.001
+  LR_DECAY: 1e-6
+  MOMENTUM: 0.9
+
+  W_DECAY: 1e-4
+  OPTIMIZER: 'Adam'
+
+  AUG: False
+
+  CUDA: False
+  GPU_ID: 1
+
+  SEED: 42
+
+LOGGING:
+
+  ENABLE_LOGGING: True
+  LOG_DIR: 'logs_effnet0_features/'
+  LOG_INTERVAL: 1
