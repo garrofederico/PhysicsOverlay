@@ -153,11 +153,12 @@ def draw_2D_projection(image, var_3D, rvec, tvec, K, dist, color=(0, 255, 255)):
     image = cv2.line(image, tuple(points_2D_emwa[3]), tuple(var_2D[3]), thickness=3, color=color)
 
 
-def calculate_w():
+def calculate_w(mesh):
     """
 
     :return: single 3D point representing the module of w
     """
+    MESH_SIZE = mesh
     x_vec = (points_3D[2] - points_3D[3]) / MESH_SIZE
     y_vec = (points_3D[1] - points_3D[3]) / MESH_SIZE
     z_vec = (points_3D[0] - points_3D[3]) / MESH_SIZE
@@ -316,37 +317,23 @@ if __name__ == '__main__':
 
     cfg = get_config_file(config_file)
 
-    INTRINSICS_FILE = os.path.abspath('../physic_overlay_codebase/CALIBRATION/intrinsics.json')
-    # INTRINSICS_FILE = os.path.abspath('../CALIBRATION/intrinsics.json')
-    MESH = os.path.abspath('MESH/repere.json')
     EXPERIMENT = 'experiment3'
     # EXPERIMENT = 'experiment4'
     CAMERA = '6_2'
 
     OFFSET = 1  # Sync (309) + beginning of the experience (exp1)
     N_KEYPOINTS = 4
-    IMAGES_PATH = os.path.abspath('../physic_overlay_codebase/DATA/6_2/GH010483/')
-    # IMAGES_PATH = os.path.abspath('../physic_overlay_codebase/DATA/6_2/GH010484/')
-    # IMAGES_PATH = os.path.abspath('../DATA/6_2/GH010434/')
-    # ANNOTATIONS_PATH = 'ANNOTATIONS/' + CAMERA + '-' + EXPERIMENT + '_points.xml'
-
-    #Repere Size
-    MESH_SIZE = 37
-
-    # get yaml config file
-
-
-
 
 
     intrinsics_json = json.load(open(os.path.abspath(cfg["SETUP"]["INTRINSICS_FILE"])))
     K = np.array(intrinsics_json[CAMERA]['K_new'], dtype=np.float32)
     dist = None  # loaded_json['6_2']['dist']
-    mesh = np.array(json.load(open(MESH))["points"], dtype=np.float32)
+    mesh = np.array(json.load(open(os.path.abspath(cfg["SETUP"]["MESH_PATH"])))["points"], dtype=np.float32)
     mesh = np.reshape(mesh, (N_KEYPOINTS, 3, 1))
-    mesh *= MESH_SIZE
+    #Multiply MESH by Repere Size
+    mesh *= cfg["SETUP"]["MESH_SIZE"]
 
-    mesh_box = MESH_SIZE * np.array([
+    mesh_box = cfg["SETUP"]["MESH_SIZE"] * np.array([
         [0, 1, 1],
         [1, 1, 0],
         [1, 0, 1],
@@ -417,9 +404,9 @@ if __name__ == '__main__':
         out2 = cv2.VideoWriter('output_video.avi', cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'), 30, (1920, 1080))
 
     #definition of moving points:
-    moving_p1 = MovingPoint([1250, 1700],(1, 0.5, 0), 2, MESH_SIZE, color=(0, 110, 100))
-    moving_p2 = MovingPoint([1850, 2250], (0.5, 0, 0), 2, MESH_SIZE, color=(100, 0, 100))
-    moving_p3 = MovingPoint([2420, 2800], (0, 0, 0.5), 1, MESH_SIZE, color=(100, 50, 200))
+    moving_p1 = MovingPoint([1250, 1700],(1, 0.5, 0), 2, cfg["SETUP"]["MESH_SIZE"], color=(0, 110, 100))
+    moving_p2 = MovingPoint([1850, 2250], (0.5, 0, 0), 2, cfg["SETUP"]["MESH_SIZE"], color=(100, 0, 100))
+    moving_p3 = MovingPoint([2420, 2800], (0, 0, 0.5), 1, cfg["SETUP"]["MESH_SIZE"], color=(100, 50, 200))
 
 
     ######## FRAME LOOP #########
@@ -432,7 +419,7 @@ if __name__ == '__main__':
         if pose is not None:
 
             print(idx)
-            image_fp = os.path.join(IMAGES_PATH,
+            image_fp = os.path.join(os.path.abspath(cfg["SETUP"]["IMAGES_PATH"]),
                                     str(OFFSET + idx - frame_filter ).zfill(5) + '.jpg')  # OFFSET is the begining of notation frames
             assert os.path.exists(image_fp)
             # Unpack pose values
@@ -500,7 +487,7 @@ if __name__ == '__main__':
 
             # Calculation of w (returns a single 3D point
 
-            w_3D = calculate_w()
+            w_3D = calculate_w(cfg["SETUP"]["MESH_SIZE"])
             scale_w = 10
             w_3D = w_3D * scale_w
             w_3D_emwa = beta_w_3d * w_3D_emwa + (1 - beta_w_3d) * w_3D
@@ -519,9 +506,10 @@ if __name__ == '__main__':
             # Refresh of points 3D used in calculation of w and speed_3d
             points_3D_prev = points_3D
             # draw moving points
-            current_frame = moving_p1.draw(idx, current_frame)
-            current_frame = moving_p2.draw(idx, current_frame)
-            current_frame = moving_p3.draw(idx, current_frame)
+            if cfg["DISPLAY"]["MOVING_POINTS_DRAW"]:
+                current_frame = moving_p1.draw(idx, current_frame)
+                current_frame = moving_p2.draw(idx, current_frame)
+                current_frame = moving_p3.draw(idx, current_frame)
 
             # 3D plot
             for pair in [(0, 3, 'red'), (1, 3, 'green'), [2, 3, 'blue']]:
@@ -545,9 +533,9 @@ if __name__ == '__main__':
                     [points_3D_prev[3, 2], points_3D_prev[3, 2] - w_3D_emwa[0]],
                     [1 - points_3D_prev[3, 1], 1 - points_3D_prev[3, 1] + w_3D_emwa[2]], 'magenta')
 
-            ax.set_xlim(-3 * MESH_SIZE, 3 * MESH_SIZE)
-            ax.set_ylim(-1 * MESH_SIZE, 5 * MESH_SIZE)
-            ax.set_zlim(-2 * MESH_SIZE, 4 * MESH_SIZE)
+            ax.set_xlim(-3 * cfg["SETUP"]["MESH_SIZE"], 3 * cfg["SETUP"]["MESH_SIZE"])
+            ax.set_ylim(-1 * cfg["SETUP"]["MESH_SIZE"], 5 * cfg["SETUP"]["MESH_SIZE"])
+            ax.set_zlim(-2 * cfg["SETUP"]["MESH_SIZE"], 4 * cfg["SETUP"]["MESH_SIZE"])
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
             ax.set_zlabel('Z')
