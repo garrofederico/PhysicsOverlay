@@ -1,0 +1,19 @@
+
+
+SETUP:
+  POSES_FROM: "annotations" # Choose between "annotations" or "predictions"
+  ANNOTATIONS_PATH: 'ANNOTATIONS/gh010491.mp4-.xml'  #if no annotations (preds from inference) leave empty
+  ROTATED_ANNOTATIONS: True
+  PREDS_PATH: ''
+  INTRINSICS_FILE: '../physic_overlay_codebase/CALIBRATION/intrinsics.json'
+  IMAGES_PATH: 'DATA/second_session/Repère/GH010491/'
+  MESH_PATH: 'MESH/repere.json'
+  MESH_SIZE: 37   #Repere Size
+  LOCAL: True
+  DEBUG_OFFSET: 0
+DISPLAY:
+  MOVING_POINTS_DRAW: False
+  SCALE_W: 30
+
+EWMA:
+  BETA_SPEED: 0.98

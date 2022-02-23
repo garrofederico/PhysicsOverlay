@@ -486,8 +486,7 @@ if __name__ == '__main__':
             # Calculation of w (returns a single 3D point
 
             w_3D = calculate_w(cfg["SETUP"]["MESH_SIZE"])
-            scale_w = 10
-            w_3D = w_3D * scale_w
+            w_3D = w_3D * cfg["DISPLAY"]["SCALE_W"]
             w_3D_emwa = beta_w_3d * w_3D_emwa + (1 - beta_w_3d) * w_3D
             # 2D value to visualize in image
 
