@@ -326,22 +326,18 @@ if __name__ == '__main__':
     OFFSET = 1  # Sync (309) + beginning of the experience (exp1)
     N_KEYPOINTS = 4
 
-
+    # TODO: Extract method (return mesh, meshbox and K, dist)
     intrinsics_json = json.load(open(os.path.abspath(cfg["SETUP"]["INTRINSICS_FILE"])))
     K = np.array(intrinsics_json[CAMERA]['K_new'], dtype=np.float32)
     dist = None  # loaded_json['6_2']['dist']
-    mesh = np.array(json.load(open(os.path.abspath(cfg["SETUP"]["MESH_PATH"])))["points"], dtype=np.float32)
+    mesh = np.array(json.load(open(os.path.abspath(cfg["SETUP"]["MESH_PATH"])))["MESH"], dtype=np.float32)
+    mesh_box = np.array(json.load(open(os.path.abspath(cfg["SETUP"]["MESH_PATH"])))["MESH_BOX"], dtype=np.float32)
     mesh = np.reshape(mesh, (N_KEYPOINTS, 3, 1))
+    mesh_box = np.array(mesh_box, dtype=np.float32)
     #Multiply MESH by Repere Size
     mesh *= cfg["SETUP"]["MESH_SIZE"]
+    mesh_box *= cfg["SETUP"]["MESH_SIZE"]
 
-    mesh_box = cfg["SETUP"]["MESH_SIZE"] * np.array([
-        [0, 1, 1],
-        [1, 1, 0],
-        [1, 0, 1],
-        [1, 1, 1]
-    ], dtype=np.float32)
-    ########## Start of script #####################
 
     # Matplotlib plot init:
     ax = plt.axes(projection='3d')
