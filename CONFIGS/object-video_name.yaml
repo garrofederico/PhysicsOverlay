@@ -3,7 +3,8 @@
 SETUP:
   POSES_FROM: "annotations" # Choose between "annotations" or "predictions"
   ANNOTATIONS_PATH: 'ANNOTATIONS/6_2-experiment3_points.xml'  #if no annotations (preds from inference) leave empty
-  PREDS_PATH: 'ANNOTATIONS/6_2-experiment3_preds.json'
+  ROTATED_ANNOTATIONS: False
+  PREDS_PATH: 'ANNOTATIONS/PREDICTIONS/6_2-experiment3_preds.json'
   INTRINSICS_FILE: '../physic_overlay_codebase/CALIBRATION/intrinsics.json'
   IMAGES_PATH: '../physic_overlay_codebase/DATA/6_2/GH010483/'
   #  IMAGES_PATH: '../physic_overlay_codebase/DATA/6_2/GH010484/'

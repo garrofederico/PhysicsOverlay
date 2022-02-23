@@ -261,6 +261,8 @@ def get_poses_from_annotations(cfg):
             x = float(x)
             y = float(y)
             points.append([x, y])
+        if cfg["SETUP"]["ROTATED_ANNOTATIONS"]:
+            points = [points[1], points[2], points[0], points[3]]
         points = np.array(points, dtype=np.float32)
         points = np.reshape(points, (N_KEYPOINTS, 2, 1))
 
@@ -412,7 +414,7 @@ if __name__ == '__main__':
     ######## FRAME LOOP #########
     for idx in range(len(poses)-DEBUG_OFFSET):
         idx += DEBUG_OFFSET
-        if idx < frame_filter: # to prevent invalid image filepath
+        if idx < frame_filter:  # to prevent invalid image filepath
             idx = frame_filter
 
         pose = poses[idx]
@@ -420,7 +422,7 @@ if __name__ == '__main__':
 
             print(idx)
             image_fp = os.path.join(os.path.abspath(cfg["SETUP"]["IMAGES_PATH"]),
-                                    str(OFFSET + idx - frame_filter ).zfill(5) + '.jpg')  # OFFSET is the begining of notation frames
+                                    str(OFFSET + idx - frame_filter).zfill(5) + '.jpg')  # OFFSET is the begining of notation frames
             assert os.path.exists(image_fp)
             # Unpack pose values
             rvec, tvec = pose[0][0], pose[0][1],
